@@ -1,0 +1,222 @@
+
+
+
+<head>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div style="width: 100%;">
+        <div id="start_screen" style="background-color: skyblue; width: 100%;">
+            <h2>start screen</h2>
+            <div class="btn btn-primary">원숭이</div>
+            <div class="btn btn-primary">사자</div>
+            <div class="btn btn-primary">호랑이</div>
+            <div class="btn btn-primary">동키</div>
+            <div class="btn btn-primary">공룡</div>
+            <div class="btn btn-primary">곰</div>
+            <div class="btn btn-success" onclick="gameStart()">게임스타트</div>
+        </div>
+
+        <div id="game_screen" style="background-color: gray;width:100%;height:100%;">
+            <h2>game screen</h2><div id='rand'></div>
+            
+
+            <div id="goalBox" style="position:absolute; top:0px; width: 150px; background-color: slateblue; height: 100%;"></div>
+            <div id="boss" class="boss btn btn-dark" style="position: absolute;">boss</div>
+
+
+            <div id="a0" class="animal btn btn-warning" style="position: absolute;">원숭이</div>
+            <div id="a1" class="animal btn btn-warning" style="position: absolute;">사자</div>
+            <div id="a2" class="animal btn btn-warning" style="position: absolute;">호랑이</div>
+            <div id="a3" class="animal btn btn-danger" style="position: absolute;">동키</div>
+            <div id="a4" class="animal btn btn-danger" style="position: absolute;">공룡</div>
+            <div id="a5" class="animal btn btn-danger" style="position: absolute;">곰</div>
+
+
+        </div>
+    </div>
+
+
+    <script src="/assets/jquery.min.js" ></script>
+    <script src="/assets/js/bootstrap.bundle.min.js" ></script>
+    <script>
+        var height = (window.height > 0) ? window.height : screen.height;
+        var width = (window.width > 0) ? window.width : screen.width;
+        var animals = [];
+
+        var goalWidth  = 150;
+        var goalLeft = parseInt(width) - goalWidth;
+        var animalThread;
+
+        init();
+
+        function drawAnimal() {
+            var animalHeight = parseInt(height) / 3 - 30;
+            var animalWidth = 60;
+            $('.animal').css('height',animalHeight);
+            $('.animal').css('width',animalWidth);
+
+            $("#a0").css('top', '0px');
+
+            $("#a1").css('top', (animalHeight + 10) + "px");
+
+            $("#a2").css('top', (animalHeight * 2 + 20) + "px");
+
+            $("#a3").css('top',(animalHeight/2) + 'px');
+            //$("#a3").css('left',(animalWidth + 10) + 'px');
+
+
+            $("#a4").css('top',(animalHeight + 10 +(animalHeight/2)) + 'px');
+            //$("#a4").css('left',(animalWidth + 10) + 'px');
+
+            $("#a5").css('top',(animalHeight*2 + 20 +(animalHeight/2)) + 'px');
+            //$("#a5").css('left',(animalWidth + 10) + 'px');
+        }
+
+        function drawBoss() {
+            var bossWidth = 70;
+            var bossHeight = 100;
+            var bossLeft = parseInt(width) - bossWidth;
+            var bossTop = (parseInt(height) - bossHeight) / 2;
+            $('#boss').css('width', bossWidth);
+            $('#boss').css('height', bossHeight);
+            $('#boss').css('left', bossLeft);
+            $('#boss').css('top', bossTop);
+        }
+
+        function drawGoalBox() {
+            $('#goalBox').css('left',goalLeft);
+        }
+
+
+        function getRandomSpeed() {
+          var start = parseInt(width) / 100;
+          var end = parseInt(width) / 20;
+          return Math.floor(Math.floor(Math.random() * end) + start);
+        }
+
+        function initAnimals() {
+            for(var i =0 ;i<6;i++ ){
+                var a = {};
+                a.type = i;
+                a.enable = 1;
+                a.speed = getRandomSpeed();
+                animals.push(a);
+            }
+        }
+
+        function init() {
+            drawAnimal();
+            drawBoss();
+            drawGoalBox();            
+            initAnimals();
+        }
+
+        function move(idx, speed){
+            var left = $('#a' + idx).css('left');
+            left = left.substr(0, left.length - 2);
+            var current = parseInt(left);
+            //$('#a' + idx).css('left', (current + speed) + "px");
+
+            return new Promise((resolve,reject) => {
+                $('#a' + idx).animate( {
+                    left : (current + speed) + "px"
+                },100,()=>{
+                    if(current + speed > goalLeft) {
+                        resolve(0);
+                    }
+                    resolve(1); 
+                });
+
+            });
+        }
+
+        function ensureLastAnimal() {
+            var lastIdx = -1;
+            var cnt = 0;
+            for(var i=0;i<6;i++){
+                if(animals[i].enable == 1) {
+                    lastIdx = i;
+                    cnt = cnt + 1;
+                }
+            }
+            if(cnt == 1) {
+                endGame(lastIdx);
+                return false;
+            }
+            return true;
+        }
+
+        async function runAnimals() {
+            for(var i = 0 ;i<6;i++) {
+                if(animals[i].enable == 0) {
+                    continue;
+                }
+                animals[i].enable = await move(i, animals[i].speed);
+                animals[i].speed = getRandomSpeed();
+                if(!ensureLastAnimal()) {
+                    return false; 
+                }
+            }
+            return true;
+        }
+
+        function runBoss() {
+            $('#boss').removeClass('btn-light');
+            $('#boss').addClass('btn-dark');
+            
+            return new Promise((resolve, reject) => {
+                setTimeout(()=>{
+                    var rand = Math.floor(Math.random()*12);
+                    //이미 들어온사람이 걸리면 안됨
+                    $('#rand').text(rand);
+                    if(rand>=0 && rand<6) {
+                        endGame(rand);
+                        resolve(false);
+                    }
+                    resolve(true);
+                },7000);
+            });
+        
+        }
+
+        async function gameStart() {
+            //boss ani
+            //move // if end zone? dont move stop ani : do move run ani
+              // except one and all end zone? end game
+
+              while(true){
+                $('#boss').removeClass('btn-dark');
+                $('#boss').addClass('btn-light');
+                for(var i=0;i<8;i++){
+                    if(!await runAnimals()) {
+                        break;
+                    }
+                }
+
+                if(!await runBoss()) {
+                    break;
+                }
+              }
+
+        }
+
+        //boss stop callback
+          // random sel animal
+          // all stop 
+          // selected ani killed ani run
+          // game end ani
+
+
+          function endGame(idx) {
+              alert($('#a'+idx).text());
+          }
+
+
+
+
+
+    </script>
+
+</body>
