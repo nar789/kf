@@ -5,16 +5,16 @@
     <meta name="viewport" content="height=device-height, initial-scale=1">
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body style="background-color: black;">
     <div style="width: 100%;">
         <div id="start_screen" style="background-color: skyblue; width: 100%;">
             <h2>start screen</h2>
-            <div class="btn btn-primary">원숭이</div>
-            <div class="btn btn-primary">사자</div>
-            <div class="btn btn-primary">호랑이</div>
-            <div class="btn btn-primary">동키</div>
-            <div class="btn btn-primary">공룡</div>
-            <div class="btn btn-primary">곰</div>
+            <div class="btn btn-primary" onclick="sel(0)">원숭이</div>
+            <div class="btn btn-primary" onclick="sel(1)">사자</div>
+            <div class="btn btn-primary" onclick="sel(2)">호랑이</div>
+            <div class="btn btn-primary" onclick="sel(3)">동키</div>
+            <div class="btn btn-primary" onclick="sel(4)">공룡</div>
+            <div class="btn btn-primary" onclick="sel(5)">곰</div>
             <div class="btn btn-success" onclick="gameStart()">게임스타트</div>
         </div>
 
@@ -26,12 +26,12 @@
             <div id="boss" class="boss btn btn-dark" style="position: absolute;">boss</div>
 
 
-            <div id="a0" class="animal btn btn-warning" style="position: absolute;">원숭이</div>
-            <div id="a1" class="animal btn btn-warning" style="position: absolute;">사자</div>
-            <div id="a2" class="animal btn btn-warning" style="position: absolute;">호랑이</div>
-            <div id="a3" class="animal btn btn-danger" style="position: absolute;">동키</div>
-            <div id="a4" class="animal btn btn-danger" style="position: absolute;">공룡</div>
-            <div id="a5" class="animal btn btn-danger" style="position: absolute;">곰</div>
+            <div id="a0" class="animal btn btn-warning" style="position: absolute;display: none;">원숭이</div>
+            <div id="a1" class="animal btn btn-warning" style="position: absolute;display: none;">사자</div>
+            <div id="a2" class="animal btn btn-warning" style="position: absolute;display: none;">호랑이</div>
+            <div id="a3" class="animal btn btn-warning" style="position: absolute;display: none;">동키</div>
+            <div id="a4" class="animal btn btn-warning" style="position: absolute;display: none;">공룡</div>
+            <div id="a5" class="animal btn btn-warning" style="position: absolute;display: none;">곰</div>
 
 
         </div>
@@ -48,8 +48,20 @@
         var goalWidth  = 150;
         var goalLeft = parseInt(width) - goalWidth;
         var animalThread;
+        const step = 8;
+        var isRunning = true;
 
         init();
+
+        function sel(idx) {
+            if(animals[idx].enable == 0) {
+              animals[idx].enable = 1;
+              $('#a' + idx).css('display','block');
+            } else {
+                animals[idx].enable = 0;
+                $('#a' + idx).css('display','none');
+            }
+        }
 
         function drawAnimal() {
             var animalHeight = parseInt(height) / 3 - 30;
@@ -58,20 +70,29 @@
             $('.animal').css('width',animalWidth);
 
             $("#a0").css('top', '0px');
+            $("#a0").css('left', '0px');
 
             $("#a1").css('top', (animalHeight + 10) + "px");
+            $("#a1").css('left', '0px');
 
             $("#a2").css('top', (animalHeight * 2 + 20) + "px");
+            $("#a2").css('left', '0px');
 
             $("#a3").css('top',(animalHeight/2) + 'px');
+            $("#a3").css('left', '0px');
             //$("#a3").css('left',(animalWidth + 10) + 'px');
 
 
             $("#a4").css('top',(animalHeight + 10 +(animalHeight/2)) + 'px');
+            $("#a4").css('left', '0px');
             //$("#a4").css('left',(animalWidth + 10) + 'px');
 
             $("#a5").css('top',(animalHeight*2 + 20 +(animalHeight/2)) + 'px');
+            $("#a5").css('left', '0px');
             //$("#a5").css('left',(animalWidth + 10) + 'px');
+
+            
+            
         }
 
         function drawBoss() {
@@ -100,7 +121,7 @@
             for(var i =0 ;i<6;i++ ){
                 var a = {};
                 a.type = i;
-                a.enable = 1;
+                a.enable = 0;                
                 a.speed = getRandomSpeed();
                 animals.push(a);
             }
@@ -153,11 +174,11 @@
                 if(animals[i].enable == 0) {
                     continue;
                 }
-                animals[i].enable = await move(i, animals[i].speed);
-                animals[i].speed = getRandomSpeed();
                 if(!ensureLastAnimal()) {
                     return false; 
                 }
+                animals[i].enable = await move(i, animals[i].speed);
+                animals[i].speed = getRandomSpeed();
             }
             return true;
         }
@@ -167,12 +188,19 @@
             $('#boss').addClass('btn-dark');
             
             return new Promise((resolve, reject) => {
-                setTimeout(()=>{
-                    var rand = Math.floor(Math.random()*12);
-                    //이미 들어온사람이 걸리면 안됨
+                setTimeout(async ()=>{
+                    var rand = 0;
+                    while(true) {
+                        rand = Math.floor(Math.random()*15);
+                        if(rand >= 0 && rand <6 && animals[rand].enable == 0) {
+                            continue;
+                        } 
+                        break;
+                    }
                     $('#rand').text(rand);
+                    //stop animation except rand index animal
                     if(rand>=0 && rand<6) {
-                        endGame(rand);
+                        await endGame(rand);
                         resolve(false);
                     }
                     resolve(true);
@@ -181,21 +209,43 @@
         
         }
 
+
         async function gameStart() {
+            var cnt = 0;
+            for(var i=0;i<6;i++){
+                if(animals[i].enable == 1) {
+                    cnt = cnt + 1;
+                }
+            }
+            if(cnt <= 0) {
+                alert("please select animals");
+                return;
+            }
+            drawAnimal();
+            drawBoss();
+            drawGoalBox();            
             //boss ani
             //move // if end zone? dont move stop ani : do move run ani
               // except one and all end zone? end game
+              isRunning = true;
 
-              while(true){
+              while(isRunning){
+                  //sing a song
                 $('#boss').removeClass('btn-dark');
                 $('#boss').addClass('btn-light');
-                for(var i=0;i<8;i++){
+                
+                var isEndOfGame = false;
+                for(var i=0;i<step;i++){
                     if(!await runAnimals()) {
+                        isEndOfGame = true;
                         break;
                     }
                 }
+                if(!ensureLastAnimal()){
+                    break;
+                }
 
-                if(!await runBoss()) {
+                if(isEndOfGame || !await runBoss()) {
                     break;
                 }
               }
@@ -209,8 +259,23 @@
           // game end ani
 
 
-          function endGame(idx) {
-              alert($('#a'+idx).text());
+          async function endGame(idx) {
+              
+              await move(idx, animals[idx].speed)
+              $('#a' + idx).removeClass('btn-warning');
+              $('#a' + idx).addClass('btn-danger');
+              
+              setTimeout(()=>{
+                isRunning = false;
+                for(var i=0;i<6;i++){
+                  animals[i].enable = 0;
+                  $('#a' + i).css('display','none');
+                  $('#a' + i).css('left','0px');
+                  $('#a'+i).removeClass('btn-danger');
+                  $('#a'+i).addClass('btn-warning');
+                }
+              },3000);
+              
           }
 
 
